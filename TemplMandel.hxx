@@ -86,7 +86,7 @@ namespace tmandel {
 		static constexpr int_t den = abs< denominator > / _gcd;
 
 		template< typename T >
-		static constexpr T to_floating = static_cast< long double >( num ) / static_cast< long double >( den );
+		static constexpr T to_floating = static_cast< T >( num ) / static_cast< T >( den );
 	};
 
 	template< typename lhs, typename rhs >
