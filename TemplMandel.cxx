@@ -8,17 +8,17 @@ namespace tmandel {
 	constexpr unsigned int max_iters = 8;
 
 	template< std::size_t w, std::size_t h, typename topleft, typename pixel, std::size_t x, std::size_t y >
-	constexpr unsigned int mandelbrot() {
+	constexpr unsigned int mandelbrot_pixel() {
 		return mandel< Cadd< topleft, C< Qmul< re< pixel >, Q< x > >, Qmul< im< pixel >, Q< y > > > >, max_iters >;
 	}
 	template< std::size_t w, std::size_t h, typename topleft, typename pixel, std::size_t... i >
-	constexpr void mandelbrot( unsigned int( &arr )[ w * h ], std::integer_sequence< std::size_t, i... > ) {
+	void mandelbrot( unsigned int( &arr )[ w * h ], std::integer_sequence< std::size_t, i... > ) {
 		using T = unsigned int[];
-		T result{ mandelbrot< w, h, topleft, pixel, i % w, i / w >()... };
+		T result{ mandelbrot_pixel< w, h, topleft, pixel, i % w, i / w >()... };
 		std::copy( std::begin( result ), std::end( result ), std::begin( arr ) );
 	}
 	template< std::size_t w, std::size_t h, typename center, typename span >
-	constexpr void mandelbrot( unsigned int( &arr )[ w * h ] ) {
+	void mandelbrot( unsigned int( &arr )[ w * h ] ) {
 		mandelbrot<
 			w, h,
 			C< Qsub< re< center >, Qdiv< re< span >, Q< 2 > > >, Qadd< im< center >, Qdiv< im< span >, Q< 2 > > > >,
@@ -28,14 +28,14 @@ namespace tmandel {
 }
 
 template< typename T >
-T clamp( T min, T max, T val ) {
+constexpr T clamp( T min, T max, T val ) {
 	return val < min ? min : ( val > max ? max : val );
 }
 
 int main( int argc, char** argv ) {
 	using namespace tmandel;
 
-	constexpr std::size_t w = 64, h = 64;
+	constexpr std::size_t w = 16, h = 16;
 	unsigned int iters[ w * h ];
 	mandelbrot< w, h, C< Q< -3, 4 > >, C< Q< 3 >, Q< 3 > > >( iters );
 	tmandel::image img{ w, h };
@@ -47,7 +47,7 @@ int main( int argc, char** argv ) {
 			img( x, y ).b = intensity;
 		}
 	}
-	char const* const filename = argc == 2 ? argv[ 1 ] : "mandelbrot.bmp";
+	char const* const filename = argc == 2 ? argv[ 1 ] : "output.bmp";
 	if( !img.to_file( filename ) )
 		std::cerr << "couldn't write file '" << filename << "'\n";
 }
