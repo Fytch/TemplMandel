@@ -19,6 +19,10 @@ namespace tmandel {
 	static constexpr int_t min = x < y ? x : y;
 	template< int_t x, int_t y >
 	static constexpr int_t max = x > y ? x : y;
+	template< int_t x, int_t y >
+	static constexpr int_t smaller = abs< x > < abs< y > ? x : y;
+	template< int_t x, int_t y >
+	static constexpr int_t bigger = abs< x > > abs< y > ? x : y;
 
 	namespace detail {
 		template< int_t x >
@@ -50,6 +54,8 @@ namespace tmandel {
 	static constexpr bool overflow_sub = overflow_add< lhs, -rhs >;
 	template< int_t lhs, int_t rhs >
 	static constexpr bool overflow_mul = hsb< abs< lhs > > + hsb< abs< rhs > > > std::numeric_limits< int_t >::digits;
+	template< int_t lhs, int_t rhs >
+	static constexpr int overflow_mul_digs = max< 0, static_cast< int >( hsb< abs< lhs > > + hsb< abs< rhs > > ) - std::numeric_limits< int_t >::digits >;
 
 	namespace detail {
 		template< int_t a, int_t b >
@@ -115,17 +121,18 @@ namespace tmandel {
 			static constexpr int_t v = a / 2 + b / 2;
 			static constexpr int_t div = 2;
 		};
-		template< int_t a, int_t b, int_t c, int_t d, bool of = overflow_mul< a, b > || overflow_mul< c, d > >
+		template< int_t a, int_t b, int_t c, int_t d, int of = max< overflow_mul_digs< a, b >, overflow_mul_digs< c, d > > >
 		struct Qadd_op_safe_helper {
+			static constexpr int_t correction = ( 1 << ( of - 1 ) );
+			using rec = Qadd_op_safe_helper< ( ( bigger< a, b > + correction ) >> of ), smaller< a, b >, ( ( bigger< c, d > + correction ) >> of ), smaller< c, d > >;
+			static constexpr int_t v = rec::v;
+			static constexpr int_t div = ( 1 << of ) * rec::div;
+		};
+		template< int_t a, int_t b, int_t c, int_t d >
+		struct Qadd_op_safe_helper< a, b, c, d, 0 > {
 			using result = Qadd_op_safe_helper_helper< a * b, c * d >;
 			static constexpr int_t v = result::v;
 			static constexpr int_t div = result::div;
-		};
-		template< int_t a, int_t b, int_t c, int_t d >
-		struct Qadd_op_safe_helper< a, b, c, d, true > {
-			using rec = Qadd_op_safe_helper< max< a, b > / 2, min< a, b >, max< c, d > / 2, min< c, d > >;
-			static constexpr int_t v = rec::v;
-			static constexpr int_t div = 2 * rec::div;
 		};
 		template< typename lhs, typename rhs >
 		struct Qadd_op_safe {
