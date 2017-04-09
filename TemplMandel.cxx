@@ -5,25 +5,25 @@
 #include <iostream>
 
 namespace tmandel {
+	template< typename... args_t >
+	constexpr void discard( args_t&&... ) {
+	}
+
 	constexpr unsigned int max_iters = 8;
 
 	template< std::size_t w, std::size_t h, typename topleft, typename pixel, std::size_t x, std::size_t y >
 	constexpr unsigned int mandelbrot_pixel() {
 		return mandel< Cadd< topleft, C< Qmul< re< pixel >, Q< x > >, Qmul< im< pixel >, Q< y > > > >, max_iters >;
 	}
-	template< std::size_t w, std::size_t h, typename topleft, typename pixel, std::size_t... i >
-	void mandelbrot( unsigned int( &arr )[ w * h ], std::integer_sequence< std::size_t, i... > ) {
-		using T = unsigned int[];
-		T result{ mandelbrot_pixel< w, h, topleft, pixel, i % w, i / w >()... };
-		std::copy( std::begin( result ), std::end( result ), std::begin( arr ) );
+	template< std::size_t w, std::size_t h, typename center, typename span, std::size_t... i >
+	constexpr void mandelbrot( unsigned int( &arr )[ w * h ], std::integer_sequence< std::size_t, i... > ) {
+		using topleft = C< Qsub< re< center >, Qdiv< re< span >, Q< 2 > > >, Qadd< im< center >, Qdiv< im< span >, Q< 2 > > > >;
+		using pixel = C< Qdiv< re< span >, Q< w > >, Qdiv< im< span >, Q< -static_cast< int_t >( h ) > > >;
+		discard( arr[ i ] = mandelbrot_pixel< w, h, topleft, pixel, i % w, i / w >()... );
 	}
 	template< std::size_t w, std::size_t h, typename center, typename span >
-	void mandelbrot( unsigned int( &arr )[ w * h ] ) {
-		mandelbrot<
-			w, h,
-			C< Qsub< re< center >, Qdiv< re< span >, Q< 2 > > >, Qadd< im< center >, Qdiv< im< span >, Q< 2 > > > >,
-			C< Qdiv< re< span >, Q< w > >, Qdiv< im< span >, Q< -static_cast< int_t >( h ) > > >
-		>( arr, std::make_index_sequence< w * h >{} );
+	constexpr void mandelbrot( unsigned int( &arr )[ w * h ] ) {
+		mandelbrot< w, h, center, span >( arr, std::make_index_sequence< w * h >{} );
 	}
 }
 
@@ -35,7 +35,7 @@ constexpr T clamp( T min, T max, T val ) {
 int main( int argc, char** argv ) {
 	using namespace tmandel;
 
-	constexpr std::size_t w = 16, h = 16;
+	constexpr std::size_t w = 32, h = 32;
 	unsigned int iters[ w * h ];
 	mandelbrot< w, h, C< Q< -3, 4 > >, C< Q< 3 >, Q< 3 > > >( iters );
 	tmandel::image img{ w, h };
