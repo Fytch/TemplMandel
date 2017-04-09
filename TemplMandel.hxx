@@ -24,6 +24,13 @@ namespace tmandel {
 	template< int_t x, int_t y >
 	static constexpr int_t bigger = abs< x > > abs< y > ? x : y;
 
+#define SMEAR_RIGHT_1( x )  (                 x   |                 x   >> 1  )
+#define SMEAR_RIGHT_2( x )  ( SMEAR_RIGHT_1 ( x ) | SMEAR_RIGHT_1 ( x ) >> 2  )
+#define SMEAR_RIGHT_4( x )  ( SMEAR_RIGHT_2 ( x ) | SMEAR_RIGHT_2 ( x ) >> 4  )
+#define SMEAR_RIGHT_8( x )  ( SMEAR_RIGHT_4 ( x ) | SMEAR_RIGHT_4 ( x ) >> 8  )
+#define SMEAR_RIGHT_16( x ) ( SMEAR_RIGHT_8 ( x ) | SMEAR_RIGHT_8 ( x ) >> 16 )
+#define SMEAR_RIGHT( x )    ( SMEAR_RIGHT_16( x ) | SMEAR_RIGHT_16( x ) >> 32 )
+
 	namespace detail {
 		template< int_t x >
 		struct hsb_helper {
@@ -35,8 +42,8 @@ namespace tmandel {
 		};
 	}
 	template< int_t x >
-	static constexpr std::size_t hsb = detail::hsb_helper< ( x | x >> 1 | x >> 2 | x >> 4 | x >> 8 | x >> 16 | x >> 32 ) >::v;
-	// smearing down before -> more instantiation cache hits (~7% speedup)
+	static constexpr std::size_t hsb = detail::hsb_helper< SMEAR_RIGHT( x ) >::v;
+	// before calculating, smear right -> way more instantiation cache hits, ~7% speedup in compile time
 
 	namespace detail {
 		template< int_t lhs, int_t rhs, bool = ( rhs >= 0 ) >
