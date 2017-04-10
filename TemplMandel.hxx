@@ -43,7 +43,7 @@ namespace tmandel {
 	}
 	template< int_t x >
 	static constexpr std::size_t hsb = detail::hsb_helper< SMEAR_RIGHT( x ) >::v;
-	// before calculating, smear right -> way more instantiation cache hits, ~7% speedup in compile time
+	// before calculating, smear right -> way more instantiation table hits, ~7% speedup in compile time
 
 	namespace detail {
 		template< int_t lhs, int_t rhs, bool = ( rhs >= 0 ) >
@@ -118,28 +118,17 @@ namespace tmandel {
 	using Qabs = Q< abs< q::num >, q::den >;
 
 	namespace detail {
-		template< int_t a, int_t b, bool of = overflow_add< a, b > >
-		struct Qadd_op_safe_helper_helper {
-			static constexpr int_t v = a + b;
-			static constexpr int_t div = 1;
-		};
-		template< int_t a, int_t b >
-		struct Qadd_op_safe_helper_helper< a, b, true > {
-			static constexpr int_t v = a / 2 + b / 2;
-			static constexpr int_t div = 2;
-		};
 		template< int_t a, int_t b, int_t c, int_t d, int of = max< overflow_mul_digs< a, b >, overflow_mul_digs< c, d > > >
 		struct Qadd_op_safe_helper {
 			static constexpr int_t correction = ( 1 << ( of - 1 ) );
 			using rec = Qadd_op_safe_helper< ( ( bigger< a, b > + correction ) >> of ), smaller< a, b >, ( ( bigger< c, d > + correction ) >> of ), smaller< c, d > >;
-			static constexpr int_t v = rec::v;
 			static constexpr int_t div = ( 1 << of ) * rec::div;
+			static constexpr int_t v = rec::v;
 		};
 		template< int_t a, int_t b, int_t c, int_t d >
 		struct Qadd_op_safe_helper< a, b, c, d, 0 > {
-			using result = Qadd_op_safe_helper_helper< a * b, c * d >;
-			static constexpr int_t v = result::v;
-			static constexpr int_t div = result::div;
+			static constexpr int_t div = overflow_add< a * b, c * d > ? 2 : 1;
+			static constexpr int_t v = a * b / div + c * d / div;
 		};
 		template< typename lhs, typename rhs >
 		struct Qadd_op_safe {
